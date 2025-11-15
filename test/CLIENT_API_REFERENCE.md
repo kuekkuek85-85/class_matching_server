@@ -1,7 +1,7 @@
 # 클라이언트 API 연동 가이드
 
 ## 기본 정보
-- **Base URL**: `http://localhost:5000` (개발 환경)
+- **Base URL**: `https://class-matching-server.replit.app`
 - **Content-Type**: `application/json`
 - **CORS**: 모든 origin 허용
 
@@ -16,7 +16,7 @@ GET /api/programs
 
 **curl 예제:**
 ```bash
-curl http://localhost:5000/api/programs
+curl https://class-matching-server.replit.app/api/programs
 ```
 
 **응답 예제:**
@@ -42,7 +42,7 @@ POST /api/programs
 
 **curl 예제:**
 ```bash
-curl -X POST http://localhost:5000/api/programs \
+curl -X POST https://class-matching-server.replit.app/api/programs \
   -H "Content-Type: application/json" \
   -d '{
     "name": "소프트웨어 개발 체험",
@@ -83,7 +83,7 @@ DELETE /api/programs/:id
 
 **curl 예제:**
 ```bash
-curl -X DELETE http://localhost:5000/api/programs/1
+curl -X DELETE https://class-matching-server.replit.app/api/programs/1
 ```
 
 **응답 (200):**
@@ -104,7 +104,7 @@ POST /api/applications
 
 **curl 예제 (최초 신청):**
 ```bash
-curl -X POST http://localhost:5000/api/applications \
+curl -X POST https://class-matching-server.replit.app/api/applications \
   -H "Content-Type: application/json" \
   -d '{
     "studentId": "20240101",
@@ -117,7 +117,7 @@ curl -X POST http://localhost:5000/api/applications \
 
 **curl 예제 (재제출 - phone/birthdate 필수):**
 ```bash
-curl -X POST http://localhost:5000/api/applications \
+curl -X POST https://class-matching-server.replit.app/api/applications \
   -H "Content-Type: application/json" \
   -d '{
     "studentId": "20240101",
@@ -207,7 +207,7 @@ GET /api/applications
 
 **curl 예제:**
 ```bash
-curl http://localhost:5000/api/applications
+curl https://class-matching-server.replit.app/api/applications
 ```
 
 **응답 (200):**
@@ -254,7 +254,7 @@ POST /api/allocate
 
 **curl 예제:**
 ```bash
-curl -X POST http://localhost:5000/api/allocate \
+curl -X POST https://class-matching-server.replit.app/api/allocate \
   -H "Content-Type: application/json"
 ```
 
@@ -287,7 +287,7 @@ PATCH /api/allocate/:id
 
 **curl 예제:**
 ```bash
-curl -X PATCH http://localhost:5000/api/allocate/1 \
+curl -X PATCH https://class-matching-server.replit.app/api/allocate/1 \
   -H "Content-Type: application/json" \
   -d '{
     "programId": 3
@@ -349,7 +349,7 @@ GET /api/allocate/results
 
 **curl 예제:**
 ```bash
-curl http://localhost:5000/api/allocate/results
+curl https://class-matching-server.replit.app/api/allocate/results
 ```
 
 **응답 (200):**
@@ -393,12 +393,12 @@ GET /api/allocate/export
 
 **curl 예제:**
 ```bash
-curl http://localhost:5000/api/allocate/export -o allocation_results.csv
+curl https://class-matching-server.replit.app/api/allocate/export -o allocation_results.csv
 ```
 
 **브라우저에서:**
 ```
-http://localhost:5000/api/allocate/export
+https://class-matching-server.replit.app/api/allocate/export
 ```
 
 **CSV 형식:**
@@ -460,7 +460,7 @@ interface EnrichedAllocation extends Allocation {
 ## 클라이언트 연동 예제 (Fetch API)
 
 ```javascript
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://class-matching-server.replit.app';
 
 // 프로그램 목록 조회
 async function getPrograms() {
