@@ -7,7 +7,8 @@ import {
   type Application,
   type InsertApplication,
   type Allocation,
-  type InsertAllocation
+  type InsertAllocation,
+  type UpdateAllocation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -27,7 +28,9 @@ export interface IStorage {
 
   // Allocations
   getAllAllocations(): Promise<Allocation[]>;
+  getAllocationById(id: number): Promise<Allocation | undefined>;
   createAllocation(allocation: InsertAllocation): Promise<Allocation>;
+  updateAllocation(id: number, updates: Partial<Allocation>): Promise<Allocation>;
   clearAllocations(): Promise<void>;
 }
 
@@ -89,10 +92,24 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(allocations).orderBy(desc(allocations.allocatedAt));
   }
 
+  async getAllocationById(id: number): Promise<Allocation | undefined> {
+    const [allocation] = await db.select().from(allocations).where(eq(allocations.id, id));
+    return allocation || undefined;
+  }
+
   async createAllocation(insertAllocation: InsertAllocation): Promise<Allocation> {
     const [allocation] = await db
       .insert(allocations)
       .values(insertAllocation)
+      .returning();
+    return allocation;
+  }
+
+  async updateAllocation(id: number, updates: Partial<Allocation>): Promise<Allocation> {
+    const [allocation] = await db
+      .update(allocations)
+      .set(updates)
+      .where(eq(allocations.id, id))
       .returning();
     return allocation;
   }

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProgramSchema, insertApplicationSchema, type Allocation } from "@shared/schema";
+import { insertProgramSchema, insertApplicationSchema, updateAllocationSchema, type Allocation } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -287,6 +287,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("배치 결과 조회 실패:", error);
       res.status(500).json({ message: "배치 결과 조회에 실패했습니다." });
+    }
+  });
+
+  // PATCH /api/allocate/:id - 배치 결과 수정
+  app.patch("/api/allocate/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "유효하지 않은 배치 ID입니다." });
+      }
+
+      // 기존 배치 확인
+      const existingAllocation = await storage.getAllocationById(id);
+      if (!existingAllocation) {
+        return res.status(404).json({ message: "배치를 찾을 수 없습니다." });
+      }
+
+      // 요청 데이터 검증
+      const validatedData = updateAllocationSchema.parse(req.body);
+      const newProgramId = validatedData.programId;
+
+      // 같은 프로그램으로 변경하려는 경우
+      if (existingAllocation.programId === newProgramId) {
+        return res.status(400).json({ message: "이미 해당 프로그램에 배치되어 있습니다." });
+      }
+
+      // 새 프로그램 존재 확인
+      const newProgram = await storage.getProgramById(newProgramId);
+      if (!newProgram) {
+        return res.status(404).json({ message: "존재하지 않는 프로그램입니다." });
+      }
+
+      // 정원 체크: 새 프로그램의 현재 배치 인원 확인
+      const allAllocations = await storage.getAllAllocations();
+      const newProgramAllocations = allAllocations.filter(a => a.programId === newProgramId);
+      
+      if (newProgramAllocations.length >= newProgram.quota) {
+        return res.status(400).json({ 
+          message: `${newProgram.name}의 정원이 가득 찼습니다. (현재 ${newProgramAllocations.length}/${newProgram.quota})` 
+        });
+      }
+
+      // 학생의 지망 순위 계산
+      const application = await storage.getApplicationByStudentId(existingAllocation.studentId);
+      let newChoiceRank = 0; // 지망 외 (수동 배치)
+
+      if (application) {
+        if (application.choice1 === newProgramId) newChoiceRank = 1;
+        else if (application.choice2 === newProgramId) newChoiceRank = 2;
+        else if (application.choice3 === newProgramId) newChoiceRank = 3;
+      }
+
+      // 배치 업데이트
+      const updatedAllocation = await storage.updateAllocation(id, {
+        programId: newProgramId,
+        choiceRank: newChoiceRank,
+        allocationType: "수동배치", // 수동으로 변경된 배치
+      });
+
+      // 프로그램 정보 추가
+      const oldProgram = await storage.getProgramById(existingAllocation.programId);
+      
+      res.json({
+        message: "배치가 수정되었습니다.",
+        allocation: updatedAllocation,
+        changes: {
+          from: {
+            programId: existingAllocation.programId,
+            programName: oldProgram?.name || "알 수 없음",
+          },
+          to: {
+            programId: newProgramId,
+            programName: newProgram.name,
+          }
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "잘못된 입력입니다.", errors: error.errors });
+      }
+      console.error("배치 수정 실패:", error);
+      res.status(500).json({ message: "배치 수정에 실패했습니다." });
     }
   });
 

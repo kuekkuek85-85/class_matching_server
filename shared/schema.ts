@@ -61,6 +61,11 @@ export const insertAllocationSchema = createInsertSchema(allocations).omit({
   allocatedAt: true,
 });
 
+// 배치 수정 스키마 (programId만 수정 가능)
+export const updateAllocationSchema = z.object({
+  programId: z.number().int().positive(),
+});
+
 // Types
 export type Program = typeof programs.$inferSelect;
 export type InsertProgram = z.infer<typeof insertProgramSchema>;
@@ -70,3 +75,4 @@ export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 
 export type Allocation = typeof allocations.$inferSelect;
 export type InsertAllocation = z.infer<typeof insertAllocationSchema>;
+export type UpdateAllocation = z.infer<typeof updateAllocationSchema>;

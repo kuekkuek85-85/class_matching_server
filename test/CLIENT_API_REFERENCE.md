@@ -280,7 +280,69 @@ curl -X POST http://localhost:5000/api/allocate \
 
 ---
 
-### 3.2 배치 결과 조회
+### 3.2 배치 결과 수정
+```bash
+PATCH /api/allocate/:id
+```
+
+**curl 예제:**
+```bash
+curl -X PATCH http://localhost:5000/api/allocate/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "programId": 3
+  }'
+```
+
+**요청 Body:**
+```typescript
+{
+  programId: number;  // 새로운 프로그램 ID
+}
+```
+
+**응답 (200):**
+```json
+{
+  "message": "배치가 수정되었습니다.",
+  "allocation": {
+    "id": 1,
+    "studentId": "20240101",
+    "programId": 3,
+    "choiceRank": 2,
+    "allocationType": "수동배치",
+    "allocatedAt": "2025-01-15T01:40:00.000Z"
+  },
+  "changes": {
+    "from": {
+      "programId": 2,
+      "programName": "AI 프로그래밍 체험"
+    },
+    "to": {
+      "programId": 3,
+      "programName": "로봇 공학 동아리"
+    }
+  }
+}
+```
+
+**에러 응답 (400 - 정원 초과):**
+```json
+{
+  "message": "로봇 공학 동아리의 정원이 가득 찼습니다. (현재 15/15)"
+}
+```
+
+**에러 응답 (404 - 배치 없음):**
+```json
+{
+  "message": "배치를 찾을 수 없습니다."
+}
+```
+
+---
+
+### 3.3 배치 결과 조회
 ```bash
 GET /api/allocate/results
 ```
@@ -324,7 +386,7 @@ curl http://localhost:5000/api/allocate/results
 
 ---
 
-### 3.3 CSV 다운로드
+### 3.4 CSV 다운로드
 ```bash
 GET /api/allocate/export
 ```
@@ -438,6 +500,16 @@ async function runAllocation() {
 // 배치 결과 조회
 async function getAllocationResults() {
   const response = await fetch(`${BASE_URL}/api/allocate/results`);
+  return await response.json();
+}
+
+// 배치 결과 수정
+async function updateAllocation(allocationId, newProgramId) {
+  const response = await fetch(`${BASE_URL}/api/allocate/${allocationId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ programId: newProgramId })
+  });
   return await response.json();
 }
 ```
