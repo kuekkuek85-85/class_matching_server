@@ -211,19 +211,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
                           : choiceRank === 2 ? application.choice2 
                           : application.choice3;
 
-          // 정원 체크 제거 - 무조건 배치
-          const allocation = await storage.createAllocation({
-            studentId: application.studentId,
-            programId: programId,
-            choiceRank: choiceRank,
-            allocationType: "자동배치",
+          const remaining = remainingQuotas.get(programId) || 0;
+
+          // 정원이 남아있으면 배치
+          if (remaining > 0) {
+            const allocation = await storage.createAllocation({
+              studentId: application.studentId,
+              programId: programId,
+              choiceRank: choiceRank,
+              allocationType: "자동배치",
+            });
+
+            allocations.push(allocation);
+            remainingQuotas.set(programId, remaining - 1);
+          }
+        }
+      }
+
+      // 3지망까지 실패한 학생들을 남은 정원이 있는 프로그램에 랜덤 배치
+      const unallocatedStudents = shuffledApplications.filter(
+        app => !allocations.some(a => a.studentId === app.studentId)
+      );
+
+      if (unallocatedStudents.length > 0) {
+        for (const application of unallocatedStudents) {
+          // 남은 정원이 있는 프로그램 찾기
+          const availablePrograms = programs.filter(p => {
+            const remaining = remainingQuotas.get(p.id) || 0;
+            return remaining > 0;
           });
 
-          allocations.push(allocation);
-          
-          // 정원 추적 (통계용)
-          const remaining = remainingQuotas.get(programId) || 0;
-          remainingQuotas.set(programId, remaining - 1);
+          if (availablePrograms.length > 0) {
+            // 랜덤하게 프로그램 선택
+            const randomProgram = availablePrograms[Math.floor(Math.random() * availablePrograms.length)];
+            
+            const allocation = await storage.createAllocation({
+              studentId: application.studentId,
+              programId: randomProgram.id,
+              choiceRank: 0, // 지망 외 배치
+              allocationType: "자동배치",
+            });
+
+            allocations.push(allocation);
+            const remaining = remainingQuotas.get(randomProgram.id) || 0;
+            remainingQuotas.set(randomProgram.id, remaining - 1);
+          }
         }
       }
 
@@ -250,15 +282,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applications = await storage.getAllApplications();
       const programs = await storage.getAllPrograms();
 
-      // 배치 결과에 학생 이름과 프로그램 이름 추가
+      // 배치 통계 계산 (메시지 생성용)
+      const totalAllocated = allocations.length;
+      const choice1Count = allocations.filter(a => a.choiceRank === 1).length;
+      const choice2Count = allocations.filter(a => a.choiceRank === 2).length;
+      const choice3Count = allocations.filter(a => a.choiceRank === 3).length;
+      const otherCount = allocations.filter(a => a.choiceRank === 0).length;
+
+      const choice1Rate = totalAllocated > 0 ? ((choice1Count / totalAllocated) * 100).toFixed(1) : "0";
+      const choice2Rate = totalAllocated > 0 ? ((choice2Count / totalAllocated) * 100).toFixed(1) : "0";
+      const choice3Rate = totalAllocated > 0 ? ((choice3Count / totalAllocated) * 100).toFixed(1) : "0";
+      const otherRate = totalAllocated > 0 ? ((otherCount / totalAllocated) * 100).toFixed(1) : "0";
+
+      // 배치 결과에 학생 이름, 프로그램 이름, 메시지 추가
       const enrichedAllocations = allocations.map(allocation => {
         const application = applications.find(app => app.studentId === allocation.studentId);
         const program = programs.find(prog => prog.id === allocation.programId);
+
+        // 학생별 메시지 생성
+        let message = "";
+        let successRate = "0";
+
+        if (allocation.choiceRank === 1) {
+          message = "축하합니다! 1지망에 배치되었습니다.";
+          successRate = choice1Rate;
+        } else if (allocation.choiceRank === 2) {
+          message = `2지망에 배치되었습니다. 1지망 프로그램의 경쟁률이 높아 양해 부탁드립니다. (전체 학생 중 ${choice2Rate}%가 2지망에 배치됨)`;
+          successRate = choice2Rate;
+        } else if (allocation.choiceRank === 3) {
+          message = `3지망에 배치되었습니다. 1-2지망 프로그램의 경쟁률이 높아 양해 부탁드립니다. (전체 학생 중 ${choice3Rate}%가 3지망에 배치됨)`;
+          successRate = choice3Rate;
+        } else {
+          // 지망 외 배치
+          message = `지망하신 프로그램(1-3지망)의 정원이 모두 마감되어 다른 프로그램에 배치되었습니다. 양해 부탁드립니다. (전체 학생 중 ${otherRate}%가 지망 외 프로그램에 배치됨)`;
+          successRate = otherRate;
+        }
 
         return {
           ...allocation,
           studentName: application?.name || "알 수 없음",
           programName: program?.name || "알 수 없음",
+          message,
+          choiceRankText: allocation.choiceRank === 0 ? "지망 외" : `${allocation.choiceRank}지망`,
+          successRate: `${successRate}%`,
         };
       });
 
