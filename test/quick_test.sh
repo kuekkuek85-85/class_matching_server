@@ -17,8 +17,9 @@ curl -s -X POST $BASE_URL/api/programs \
     "type": "진로체험활동",
     "quota": 15,
     "description": "웹 개발과 앱 개발을 체험해볼 수 있는 프로그램입니다."
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 curl -s -X POST $BASE_URL/api/programs \
@@ -28,8 +29,9 @@ curl -s -X POST $BASE_URL/api/programs \
     "type": "진로체험활동",
     "quota": 10,
     "description": "인공지능 기초와 머신러닝을 배웁니다."
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 curl -s -X POST $BASE_URL/api/programs \
@@ -39,14 +41,16 @@ curl -s -X POST $BASE_URL/api/programs \
     "type": "동아리활동",
     "quota": 12,
     "description": "로봇 제작과 프로그래밍을 배웁니다."
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 # 2. 프로그램 목록 조회
 echo "📌 2. 프로그램 목록 조회..."
-curl -s $BASE_URL/api/programs | jq
+curl -s $BASE_URL/api/programs
 
+echo ""
 echo ""
 
 # 3. 학생 신청
@@ -59,8 +63,9 @@ curl -s -X POST $BASE_URL/api/applications \
     "choice1": 1,
     "choice2": 2,
     "choice3": 3
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 curl -s -X POST $BASE_URL/api/applications \
@@ -71,8 +76,9 @@ curl -s -X POST $BASE_URL/api/applications \
     "choice1": 2,
     "choice2": 1,
     "choice3": 3
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 curl -s -X POST $BASE_URL/api/applications \
@@ -83,8 +89,9 @@ curl -s -X POST $BASE_URL/api/applications \
     "choice1": 1,
     "choice2": 3,
     "choice3": 2
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 # 4. 재제출 테스트 (전화번호/생년월일 없이 - 실패해야 함)
@@ -97,8 +104,9 @@ curl -s -X POST $BASE_URL/api/applications \
     "choice1": 2,
     "choice2": 1,
     "choice3": 3
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 # 5. 재제출 (정상)
@@ -113,32 +121,37 @@ curl -s -X POST $BASE_URL/api/applications \
     "choice1": 2,
     "choice2": 1,
     "choice3": 3
-  }' | jq
+  }'
 
+echo ""
 echo ""
 
 # 6. 신청 현황 조회
 echo "📌 6. 신청 현황 조회..."
-curl -s $BASE_URL/api/applications | jq
+curl -s $BASE_URL/api/applications
 
+echo ""
 echo ""
 
 # 7. 배치 실행
 echo "📌 7. 배치 실행 중..."
-curl -s -X POST $BASE_URL/api/allocate | jq
+curl -s -X POST $BASE_URL/api/allocate
 
+echo ""
 echo ""
 
 # 8. 배치 결과 조회
 echo "📌 8. 배치 결과 조회..."
-curl -s $BASE_URL/api/allocate/results | jq
+curl -s $BASE_URL/api/allocate/results
 
+echo ""
 echo ""
 
 # 9. CSV 다운로드
 echo "📌 9. CSV 다운로드..."
 curl -s $BASE_URL/api/allocate/export -o test/allocation_results.csv
 echo "✅ CSV 파일 저장 완료: test/allocation_results.csv"
+echo ""
 cat test/allocation_results.csv
 
 echo ""
