@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProgramSchema, insertApplicationSchema } from "@shared/schema";
+import { insertProgramSchema, insertApplicationSchema, type Allocation } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -197,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shuffledApplications = [...applications].sort(() => Math.random() - 0.5);
 
       // 배치 결과 저장
-      const allocations = [];
+      const allocations: Allocation[] = [];
 
       // 1지망부터 3지망까지 순서대로 배치
       for (const choiceRank of [1, 2, 3]) {
