@@ -252,6 +252,13 @@ curl https://class-matching-server.replit.app/api/applications
 POST /api/allocate
 ```
 
+**배치 알고리즘:**
+1. 학생을 무작위로 섞기
+2. 1지망부터 순서대로 정원이 있는 학생 배치
+3. 2지망, 3지망 순서로 미배치 학생 배치
+4. **3지망까지 실패한 학생은 남은 정원이 있는 프로그램에 랜덤 배치** (choiceRank: 0)
+5. 모든 학생 100% 배치 보장 (총 정원이 학생 수보다 많을 경우)
+
 **curl 예제:**
 ```bash
 curl -X POST https://class-matching-server.replit.app/api/allocate \
@@ -262,8 +269,8 @@ curl -X POST https://class-matching-server.replit.app/api/allocate \
 ```json
 {
   "message": "배치가 완료되었습니다.",
-  "totalStudents": 10,
-  "allocatedCount": 10,
+  "totalStudents": 15,
+  "allocatedCount": 15,
   "unallocatedCount": 0,
   "allocations": [
     {
@@ -273,10 +280,22 @@ curl -X POST https://class-matching-server.replit.app/api/allocate \
       "choiceRank": 1,
       "allocationType": "자동배치",
       "allocatedAt": "2025-01-15T01:40:00.000Z"
+    },
+    {
+      "id": 2,
+      "studentId": "20240102",
+      "programId": 5,
+      "choiceRank": 0,
+      "allocationType": "자동배치",
+      "allocatedAt": "2025-01-15T01:40:01.000Z"
     }
   ]
 }
 ```
+
+**참고:**
+- `choiceRank`: 1(1지망), 2(2지망), 3(3지망), 0(지망 외 랜덤 배치)
+- `unallocatedCount`: 총 정원이 부족한 경우에만 0보다 큼
 
 ---
 
@@ -326,19 +345,15 @@ curl -X PATCH https://class-matching-server.replit.app/api/allocate/1 \
 }
 ```
 
-**에러 응답 (400 - 정원 초과):**
-```json
-{
-  "message": "로봇 공학 동아리의 정원이 가득 찼습니다. (현재 15/15)"
-}
-```
-
 **에러 응답 (404 - 배치 없음):**
 ```json
 {
   "message": "배치를 찾을 수 없습니다."
 }
 ```
+
+**참고:**
+- 정원 체크가 제거되어 정원 초과 시에도 배치 변경 가능
 
 ---
 
@@ -364,7 +379,36 @@ curl https://class-matching-server.replit.app/api/allocate/results
       "allocationType": "자동배치",
       "allocatedAt": "2025-01-15T01:40:00.000Z",
       "studentName": "김철수",
-      "programName": "AI 프로그래밍 체험"
+      "programName": "AI 프로그래밍 체험",
+      "choiceRankText": "1지망",
+      "message": "축하합니다! 1지망에 배치되었습니다.",
+      "successRate": "66.7%"
+    },
+    {
+      "id": 2,
+      "studentId": "20240102",
+      "programId": 5,
+      "choiceRank": 2,
+      "allocationType": "자동배치",
+      "allocatedAt": "2025-01-15T01:40:01.000Z",
+      "studentName": "이영희",
+      "programName": "웹 디자인 체험",
+      "choiceRankText": "2지망",
+      "message": "2지망에 배치되었습니다. 1지망 프로그램의 경쟁률이 높아 양해 부탁드립니다. (전체 학생 중 13.3%가 2지망에 배치됨)",
+      "successRate": "13.3%"
+    },
+    {
+      "id": 3,
+      "studentId": "20240103",
+      "programId": 8,
+      "choiceRank": 0,
+      "allocationType": "자동배치",
+      "allocatedAt": "2025-01-15T01:40:02.000Z",
+      "studentName": "박민수",
+      "programName": "로봇 공학 동아리",
+      "choiceRankText": "지망 외",
+      "message": "지망하신 프로그램(1-3지망)의 정원이 모두 마감되어 다른 프로그램에 배치되었습니다. 양해 부탁드립니다. (전체 학생 중 5.0%가 지망 외 프로그램에 배치됨)",
+      "successRate": "5.0%"
     }
   ],
   "programStats": [
@@ -379,10 +423,15 @@ curl https://class-matching-server.replit.app/api/allocate/results
       "choice3Count": 0
     }
   ],
-  "totalAllocated": 10,
+  "totalAllocated": 15,
   "totalUnallocated": 0
 }
 ```
+
+**응답 필드 설명:**
+- `choiceRankText`: "1지망", "2지망", "3지망", "지망 외"
+- `message`: 교사가 학생에게 전달할 메시지 (배치 결과 안내)
+- `successRate`: 해당 지망 배치 성공률 (전체 학생 대비 비율)
 
 ---
 
@@ -443,15 +492,18 @@ interface Allocation {
   id: number;
   studentId: string;
   programId: number;
-  choiceRank: number;
-  allocationType: string;
+  choiceRank: number;        // 0: 지망 외, 1: 1지망, 2: 2지망, 3: 3지망
+  allocationType: string;    // "자동배치" | "수동배치"
   allocatedAt: string;
 }
 
-// Enriched Allocation (with names)
+// Enriched Allocation (배치 결과 조회 시)
 interface EnrichedAllocation extends Allocation {
   studentName: string;
   programName: string;
+  choiceRankText: string;    // "1지망" | "2지망" | "3지망" | "지망 외"
+  message: string;           // 학생에게 전달할 메시지
+  successRate: string;       // 해당 지망 배치 성공률 (예: "66.7%")
 }
 ```
 
