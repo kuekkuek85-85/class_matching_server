@@ -211,20 +211,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
                           : choiceRank === 2 ? application.choice2 
                           : application.choice3;
 
+          // 정원 체크 제거 - 무조건 배치
+          const allocation = await storage.createAllocation({
+            studentId: application.studentId,
+            programId: programId,
+            choiceRank: choiceRank,
+            allocationType: "자동배치",
+          });
+
+          allocations.push(allocation);
+          
+          // 정원 추적 (통계용)
           const remaining = remainingQuotas.get(programId) || 0;
-
-          // 정원이 남아있으면 배치
-          if (remaining > 0) {
-            const allocation = await storage.createAllocation({
-              studentId: application.studentId,
-              programId: programId,
-              choiceRank: choiceRank,
-              allocationType: "자동배치",
-            });
-
-            allocations.push(allocation);
-            remainingQuotas.set(programId, remaining - 1);
-          }
+          remainingQuotas.set(programId, remaining - 1);
         }
       }
 
@@ -319,15 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "존재하지 않는 프로그램입니다." });
       }
 
-      // 정원 체크: 새 프로그램의 현재 배치 인원 확인
-      const allAllocations = await storage.getAllAllocations();
-      const newProgramAllocations = allAllocations.filter(a => a.programId === newProgramId);
-      
-      if (newProgramAllocations.length >= newProgram.quota) {
-        return res.status(400).json({ 
-          message: `${newProgram.name}의 정원이 가득 찼습니다. (현재 ${newProgramAllocations.length}/${newProgram.quota})` 
-        });
-      }
+      // 정원 체크 제거 - 무조건 배치 허용
 
       // 학생의 지망 순위 계산
       const application = await storage.getApplicationByStudentId(existingAllocation.studentId);
